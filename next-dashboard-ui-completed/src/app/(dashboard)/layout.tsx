@@ -1,11 +1,12 @@
-'use client';
+"use client";
 
-import { FC, ReactNode } from 'react';
-import { usePathname } from 'next/navigation';
-import Link from 'next/link';
-import { useAuth } from '@/contexts/AuthContext';
-import { useThemeStore } from '@/store/useThemeStore';
-import { cn } from '@/lib/utils';
+import { FC, ReactNode } from "react";
+import { redirect, usePathname } from "next/navigation";
+import Link from "next/link";
+import { useAuth } from "@/contexts/AuthContext";
+import { useThemeStore } from "@/store/useThemeStore";
+import { cn } from "@/lib/utils";
+import { signOut, useSession } from "next-auth/react";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -13,43 +14,42 @@ interface DashboardLayoutProps {
 
 const DashboardLayout: FC<DashboardLayoutProps> = ({ children }) => {
   const pathname = usePathname();
-  const { user, logout } = useAuth();
+  const { status, data } = useSession();
+  if (status === "unauthenticated") redirect("/");
   const { isDarkMode } = useThemeStore();
-
+  console.log("data layout : ", data);
   const handleLogout = () => {
-    logout();
-    window.location.href = '/';
+    signOut();
   };
 
   const getNavigationItems = () => {
-    if (!user) return [];
+    console.log("data?.user?.role : ", data?.user?.role);
+    switch (data?.user?.role) {
+      case "student":
+        return [
+          { href: "/student", label: "Tableau de bord", icon: "📊" },
+          { href: "/student/courses", label: "Cours", icon: "📚" },
+          { href: "/student/schedule", label: "Emploi du temps", icon: "📅" },
+          { href: "/student/profile", label: "Profil", icon: "👤" },
+        ];
+      case "teacher":
+        return [
+          { href: "/teacher", label: "Tableau de bord", icon: "📊" },
+          { href: "/teacher/attendance", label: "Présence", icon: "✅" },
+          { href: "/teacher/courses", label: "Cours", icon: "📚" },
+          { href: "/teacher/profile", label: "Profil", icon: "👤" },
+          { href: "/teacher/schedule", label: "Emploi du temps", icon: "📅" },
+        ];
+      case "admin":
+        console.log("admin admin admin : ");
+        return [
+          { href: "/admin", label: "Tableau de bord", icon: "📊" },
+          { href: "/admin/users", label: "Utilisateurs", icon: "👥" },
+          { href: "/admin/attendance", label: "Présence", icon: "✅" },
+          { href: "/admin/courses", label: "Cours", icon: "📚" },
+          { href: "/admin/rooms", label: "Salles", icon: "🏫" },
 
-    switch (user.role) {
-      case 'student':
-        return [
-          { href: '/student', label: 'Tableau de bord', icon: '📊' },
-          { href: '/student/courses', label: 'Cours', icon: '📚' },
-          { href: '/student/schedule', label: 'Emploi du temps', icon: '📅' },
-          { href: '/student/profile', label: 'Profil', icon: '👤' },
-          
-        ];
-      case 'teacher':
-        return [
-          { href: '/teacher', label: 'Tableau de bord', icon: '📊' },
-          { href: '/teacher/attendance', label: 'Présence', icon: '✅' },
-          { href: '/teacher/courses', label: 'Cours', icon: '📚' },
-          { href: '/teacher/profile', label: 'Profil', icon: '👤' },
-          { href: '/teacher/schedule', label: 'Emploi du temps', icon: '📅' },
-        ];
-      case 'admin':
-        return [
-          { href: '/admin', label: 'Tableau de bord', icon: '📊' },
-          { href: '/admin/users', label: 'Utilisateurs', icon: '👥' },
-          { href: '/admin/attendance', label: 'Présence', icon: '✅' },
-          { href: '/admin/courses', label: 'Cours', icon: '📚' },
-          { href: '/admin/rooms', label: 'Salles', icon: '🏫' },
-          
-          { href: '/admin/schedules', label: 'Emploi du temps', icon: '📅' }
+          { href: "/admin/schedules", label: "Emploi du temps", icon: "📅" },
         ];
       default:
         return [];
@@ -57,7 +57,12 @@ const DashboardLayout: FC<DashboardLayoutProps> = ({ children }) => {
   };
 
   return (
-    <div className={cn('min-h-screen', isDarkMode ? 'dark bg-gray-900' : 'bg-gray-50')}>
+    <div
+      className={cn(
+        "min-h-screen",
+        isDarkMode ? "dark bg-gray-900" : "bg-gray-50"
+      )}
+    >
       <div className="flex h-screen">
         {/* Sidebar */}
         <div className="w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 fixed h-full">
@@ -67,8 +72,12 @@ const DashboardLayout: FC<DashboardLayoutProps> = ({ children }) => {
                 🎓
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-800 dark:text-white">USTHB</h1>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Gestion de Présence</p>
+                <h1 className="text-xl font-bold text-gray-800 dark:text-white">
+                  USTHB
+                </h1>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Gestion de Présence
+                </p>
               </div>
             </div>
           </div>
@@ -80,8 +89,8 @@ const DashboardLayout: FC<DashboardLayoutProps> = ({ children }) => {
                     key={item.href}
                     href={item.href}
                     className={cn(
-                      'flex items-center px-4 py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700',
-                      pathname === item.href && 'bg-gray-100 dark:bg-gray-700'
+                      "flex items-center px-4 py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700",
+                      pathname === item.href && "bg-gray-100 dark:bg-gray-700"
                     )}
                   >
                     <span className="mr-2">{item.icon}</span>
@@ -101,9 +110,7 @@ const DashboardLayout: FC<DashboardLayoutProps> = ({ children }) => {
         </div>
 
         {/* Main content */}
-        <div className="flex-1 ml-64 p-6">
-          {children}
-        </div>
+        <div className="flex-1 ml-64 p-6">{children}</div>
       </div>
     </div>
   );

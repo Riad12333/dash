@@ -1,0 +1,129 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model academic_years {
+  id         Int        @id @default(autoincrement())
+  annee      String     @db.VarChar(9)
+  specialite String     @db.VarChar(255)
+  faculte    String     @db.VarChar(255)
+  sections   sections[]
+}
+
+model admins {
+  id            Int       @id @default(autoincrement())
+  name          String    @db.VarChar(255)
+  email         String    @unique @db.VarChar(255)
+  password_hash String    @db.VarChar(255)
+  created_at    DateTime? @default(now()) @db.Timestamp(6)
+}
+
+model attendance {
+  id           Int         @id @default(autoincrement())
+  student_id   Int?
+  classroom_id Int?
+  course_id    Int?
+  timestamp    DateTime    @db.Timestamp(6)
+  statut       String?     @default("Present") @db.VarChar(50)
+  verified     Boolean?    @default(true)
+  classrooms   classrooms? @relation(fields: [classroom_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  courses      courses?    @relation(fields: [course_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  students     students?   @relation(fields: [student_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([student_id, classroom_id, course_id, timestamp])
+}
+
+model classrooms {
+  id                         Int                          @id @default(autoincrement())
+  name                       String                       @db.VarChar(100)
+  capacity                   Int?
+  status                     String?                      @default("available") @db.VarChar(50)
+  attendance                 attendance[]
+  professor_classroom_access professor_classroom_access[]
+  schedules                  schedules[]
+}
+
+model courses {
+  id            Int          @id @default(autoincrement())
+  name          String       @db.VarChar(255)
+  section_id    Int?
+  professeur_id Int?
+  room          String       @db.VarChar(255)
+  attendance    attendance[]
+  professors    professors?  @relation(fields: [professeur_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  sections      sections?    @relation(fields: [section_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  schedules     schedules[]
+}
+
+model groups {
+  id         Int        @id @default(autoincrement())
+  name       String     @db.VarChar(100)
+  section_id Int?
+  sections   sections?  @relation(fields: [section_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  students   students[]
+}
+
+model professor_classroom_access {
+  id           Int         @id @default(autoincrement())
+  professor_id Int?
+  classroom_id Int?
+  timestamp    DateTime    @db.Timestamp(6)
+  action       String      @db.VarChar(50)
+  verified     Boolean?    @default(true)
+  classrooms   classrooms? @relation(fields: [classroom_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  professors   professors? @relation(fields: [professor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model professors {
+  id                         Int                          @id @default(autoincrement())
+  name                       String                       @db.VarChar(255)
+  email                      String                       @unique @db.VarChar(255)
+  password_hash              String                       @db.VarChar(255)
+  fingerprint_id             String                       @unique @db.VarChar(255)
+  status                     String?                      @default("active") @db.VarChar(50)
+  created_at                 DateTime?                    @default(now()) @db.Timestamp(6)
+  courses                    courses[]
+  professor_classroom_access professor_classroom_access[]
+}
+
+model schedules {
+  id           Int         @id @default(autoincrement())
+  course       Int?
+  classroom_id Int?
+  day_of_week  String      @db.VarChar(20)
+  start_time   DateTime    @db.Time(6)
+  end_time     DateTime    @db.Time(6)
+  classrooms   classrooms? @relation(fields: [classroom_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  courses      courses?    @relation(fields: [course], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model sections {
+  id               Int             @id @default(autoincrement())
+  name             String          @db.VarChar(100)
+  academic_year_id Int?
+  courses          courses[]
+  groups           groups[]
+  academic_years   academic_years? @relation(fields: [academic_year_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  students         students[]
+}
+
+model students {
+  id             Int          @id @default(autoincrement())
+  name           String       @db.VarChar(255)
+  email          String       @unique @db.VarChar(255)
+  password_hash  String       @db.VarChar(255)
+  fingerprint_id String       @unique @db.VarChar(255)
+  group_id       Int?
+  section_id     Int?
+  status         String?      @default("active") @db.VarChar(50)
+  created_at     DateTime?    @default(now()) @db.Timestamp(6)
+  attendance     attendance[]
+  groups         groups?      @relation(fields: [group_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  sections       sections?    @relation(fields: [section_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}

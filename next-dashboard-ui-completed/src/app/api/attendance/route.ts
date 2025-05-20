@@ -1,5 +1,8 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { getServerSession } from "next-auth";
+import prisma from "../../../lib/prisma.js";
+import { NextRequest, NextResponse } from "next/server";
+import { authOptions } from "../auth/[...nextauth]/route";
+import { z } from "zod";
 
 interface AttendanceRecord {
   id: string;
@@ -8,7 +11,7 @@ interface AttendanceRecord {
   course: string;
   date: string;
   time: string;
-  status: 'present' | 'absent' | 'late';
+  status: "present" | "absent" | "late";
   verifiedBy: string;
   fingerprintVerified: boolean;
 }
@@ -16,76 +19,160 @@ interface AttendanceRecord {
 // Simuler une base de données en mémoire
 let attendanceRecords: AttendanceRecord[] = [];
 
-export async function GET(request: NextRequest) {
-  const searchParams = request.nextUrl.searchParams;
-  const courseId = searchParams.get('courseId');
-  const date = searchParams.get('date');
+// Validation schema for date filters
+const dateFilterSchema = z.object({
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+  studentId: z.string().optional(),
+  courseId: z.string().optional(),
+});
 
-  let filteredRecords = [...attendanceRecords];
+export async function GET() {
+  try {
+    const session = await getServerSession(authOptions);
 
-  // Filtrer par cours si spécifié
-  if (courseId && courseId !== 'all') {
-    filteredRecords = filteredRecords.filter(record => record.course === courseId);
+    // Check authentication
+    if (!session) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
+    // Fetch all attendance records with related data
+    const attendance = await prisma.attendance.findMany({
+      include: {
+        students: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            fingerprint_id: true,
+          },
+        },
+        courses: {
+          select: {
+            id: true,
+            name: true,
+            professors: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        timestamp: "desc",
+      },
+    });
+
+    // Transform the data to include formatted dates and complete information
+    const formattedAttendance = attendance.map((record) => ({
+      id: record.id,
+      timestamp: record.timestamp,
+      status: record.statut,
+      student: record.students
+        ? {
+            id: record.students.id,
+            name: record.students.name,
+            email: record.students.email,
+            fingerprint_id: record.students.fingerprint_id,
+          }
+        : null,
+      course: record.courses
+        ? {
+            id: record.courses.id,
+            name: record.courses.name,
+            professor: record.courses.professors
+              ? {
+                  id: record.courses.professors.id,
+                  name: record.courses.professors.name,
+                  email: record.courses.professors.email,
+                }
+              : null,
+          }
+        : null,
+      formattedDate: record.timestamp.toLocaleDateString("fr-FR", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    }));
+
+    return NextResponse.json(
+      {
+        attendance: formattedAttendance,
+        total: formattedAttendance.length,
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("Error fetching attendance records:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch attendance records" },
+      { status: 500 }
+    );
   }
-
-  // Filtrer par date si spécifiée
-  if (date) {
-    filteredRecords = filteredRecords.filter(record => record.date === date);
-  }
-
-  // Trier par date et heure
-  filteredRecords.sort((a, b) => {
-    const dateA = new Date(`${a.date}T${a.time}`);
-    const dateB = new Date(`${b.date}T${b.time}`);
-    return dateB.getTime() - dateA.getTime();
-  });
-
-  return NextResponse.json(filteredRecords);
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const newAttendance: AttendanceRecord = await request.json();
-    
-    // Vérifier si l'étudiant n'est pas déjà marqué présent pour ce cours aujourd'hui
-    const existingAttendance = attendanceRecords.find(
-      record => 
-        record.studentId === newAttendance.studentId &&
-        record.course === newAttendance.course &&
-        record.date === newAttendance.date
-    );
+    const session = await getServerSession(authOptions);
 
-    if (existingAttendance) {
+    // Check authentication
+    if (!session) {
       return NextResponse.json(
-        { error: 'Vous êtes déjà marqué présent pour ce cours aujourd\'hui' },
-        { status: 400 }
+        { error: "Authentication required" },
+        { status: 401 }
       );
     }
 
-    // Générer un ID unique pour le nouvel enregistrement
-    const newId = `ATT${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    const attendanceWithId = { ...newAttendance, id: newId };
+    const data = await request.json();
 
-    // Ajouter le nouvel enregistrement
-    attendanceRecords.push(attendanceWithId);
-
-    // Mettre à jour les enregistrements existants pour éviter les doublons
-    attendanceRecords = attendanceRecords.filter((record, index, self) => {
-      const isDuplicate = self.findIndex(
-        r => 
-          r.studentId === record.studentId && 
-          r.course === record.course && 
-          r.date === record.date
-      ) !== index;
-      return !isDuplicate;
+    // Create the attendance record
+    const attendance = await prisma.attendance.create({
+      data: {
+        student_id: data.student_id,
+        course_id: data.course_id,
+        statut: data.status,
+        timestamp: new Date(),
+      },
+      include: {
+        students: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            fingerprint_id: true,
+          },
+        },
+        courses: {
+          select: {
+            id: true,
+            name: true,
+            professors: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+        },
+      },
     });
 
-    return NextResponse.json(attendanceWithId, { status: 201 });
+    return NextResponse.json(attendance, { status: 201 });
   } catch (error) {
-    console.error('Erreur lors de l\'enregistrement de la présence:', error);
+    console.error("Error creating attendance record:", error);
     return NextResponse.json(
-      { error: 'Erreur lors de l\'enregistrement de la présence' },
+      { error: "Failed to create attendance record" },
       { status: 500 }
     );
   }
-} 
+}

@@ -1,82 +1,99 @@
-'use client';
+"use client";
 
-import { FC, useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import AttendanceChart from '@/components/AttendanceChart';
-
-interface AttendanceRecord {
-  id: string;
-  studentName: string;
-  studentId: string;
-  course: string;
-  date: string;
-  time: string;
-  status: 'present' | 'absent' | 'late';
-  verifiedBy: string;
-  fingerprintVerified: boolean;
-}
+import { FC, useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAttendance } from "@/hooks/useAttendance";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { Loader2 } from "lucide-react";
 
 const AdminAttendance: FC = () => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCourse, setSelectedCourse] = useState('all');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCourse, setSelectedCourse] = useState("all");
   const [selectedDate, setSelectedDate] = useState(
-    new Date().toISOString().split('T')[0]
+    new Date().toISOString().split("T")[0]
   );
-  const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
 
-  const courses = [
-    { id: 'INFO401', name: 'Intelligence Artificielle' },
-    { id: 'INFO402', name: 'Systèmes Distribués' },
-    { id: 'INFO403', name: 'Intelligence Artificielle TD' },
-  ];
-
-  useEffect(() => {
-    fetchAttendanceRecords();
-  }, [selectedCourse, selectedDate]);
-
-  const fetchAttendanceRecords = async () => {
-    try {
-      setIsLoading(true);
-      const response = await fetch(
-        `/api/attendance?courseId=${selectedCourse}&date=${selectedDate}`
-      );
-      const data = await response.json();
-      setAttendanceRecords(data);
-    } catch (error) {
-      console.error('Erreur lors de la récupération des présences:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const filteredRecords = attendanceRecords.filter((record) => {
+  const router = useRouter();
+  const { status, data: session } = useSession({
+    required: true,
+    onUnauthenticated() {
+      router.push("/sign-in");
+    },
+  });
+  const { attendance, isLoading, error } = useAttendance();
+  console.log(attendance);
+  // Filter records based on search query and selected filters
+  const filteredRecords = attendance.filter((record) => {
     const matchesSearch =
-      record.studentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      record.studentId.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSearch;
+      record.student?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      record.student?.email.toLowerCase().includes(searchQuery.toLowerCase());
+
+    const matchesCourse =
+      selectedCourse === "all" ||
+      record.course?.id.toString() === selectedCourse;
+
+    // Convert record timestamp to date string for comparison
+    const recordDate = new Date(record.timestamp).toISOString().split("T")[0];
+    const matchesDate = selectedDate ? recordDate === selectedDate : true;
+    return matchesSearch && matchesCourse && matchesDate;
   });
 
-  const getStatusColor = (status: AttendanceRecord['status']) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
-      case 'present':
-        return 'bg-green-100 text-green-700';
-      case 'absent':
-        return 'bg-red-100 text-red-700';
-      case 'late':
-        return 'bg-yellow-100 text-yellow-700';
+      case "present":
+        return "bg-green-100 text-green-700";
+      case "absent":
+        return "bg-red-100 text-red-700";
+      case "late":
+        return "bg-yellow-100 text-yellow-700";
+      default:
+        return "bg-gray-100 text-gray-700";
     }
   };
 
-  // Calculer les statistiques pour aujourd'hui
+  // Calculate statistics
   const todayStats = {
-    present: filteredRecords.filter(r => r.status === 'present').length,
-    absent: filteredRecords.filter(r => r.status === 'absent').length,
-    late: filteredRecords.filter(r => r.status === 'late').length,
+    present: filteredRecords.filter((r) => r.status === "present").length,
+    absent: filteredRecords.filter((r) => r.status === "absent").length,
+    late: filteredRecords.filter((r) => r.status === "late").length,
   };
 
   const totalRecords = todayStats.present + todayStats.absent + todayStats.late;
-  const presenceRate = totalRecords > 0 ? Math.round((todayStats.present / totalRecords) * 100) : 0;
+  const presenceRate =
+    totalRecords > 0
+      ? Math.round((todayStats.present / totalRecords) * 100)
+      : 0;
+  const overallStats = {
+    present: attendance.filter((r) => r.status.toLowerCase() === "present")
+      .length,
+    absent: attendance.filter((r) => r.status.toLowerCase() === "absent")
+      .length,
+    late: attendance.filter((r) => r.status.toLowerCase() === "late").length,
+  };
+
+  const overallTotal =
+    overallStats.present + overallStats.absent + overallStats.late;
+
+  const overallPresenceRate =
+    overallTotal > 0
+      ? Math.round((overallStats.present / overallTotal) * 100)
+      : 0;
+  if (status === "loading" || isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <div className="bg-red-50 text-red-800 p-4 rounded-md">{error}</div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -85,25 +102,35 @@ const AdminAttendance: FC = () => {
         <Card>
           <CardContent className="pt-6">
             <div className="text-center">
-              <p className="text-sm font-medium text-gray-500">Taux de présence</p>
-              <p className="text-3xl font-bold text-green-600">{presenceRate}%</p>
+              <p className="text-sm font-medium text-gray-500">
+                Taux de présence
+              </p>
+              <p className="text-3xl font-bold text-green-600">
+                {overallPresenceRate}%
+              </p>
             </div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
             <div className="text-center">
-              <p className="text-sm font-medium text-gray-500">Présents aujourd'hui</p>
-              <p className="text-3xl font-bold text-blue-600">{todayStats.present}</p>
+              <p className="text-sm font-medium text-gray-500">
+                Présents aujourd&apos;hui
+              </p>
+              <p className="text-3xl font-bold text-blue-600">
+                {todayStats.present}
+              </p>
             </div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
             <div className="text-center">
-              <p className="text-sm font-medium text-gray-500">Vérifications d'empreintes</p>
+              <p className="text-sm font-medium text-gray-500">
+                Vérifications d&apos;empreintes
+              </p>
               <p className="text-3xl font-bold text-purple-600">
-                {filteredRecords.filter(r => r.fingerprintVerified).length}
+                {filteredRecords.length}
               </p>
             </div>
           </CardContent>
@@ -112,7 +139,9 @@ const AdminAttendance: FC = () => {
           <CardContent className="pt-6">
             <div className="text-center">
               <p className="text-sm font-medium text-gray-500">Absents</p>
-              <p className="text-3xl font-bold text-red-600">{todayStats.absent}</p>
+              <p className="text-3xl font-bold text-red-600">
+                {todayStats.absent}
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -135,11 +164,20 @@ const AdminAttendance: FC = () => {
           className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           <option value="all">Tous les cours</option>
-          {courses.map((course) => (
-            <option key={course.id} value={course.id}>
-              {course.name}
-            </option>
-          ))}
+          {attendance
+            .map((record) => record.course)
+            .filter(
+              (course, index, self) =>
+                course && self.findIndex((c) => c?.id === course?.id) === index
+            )
+            .map(
+              (course) =>
+                course && (
+                  <option key={course.id} value={course.id.toString()}>
+                    {course.name}
+                  </option>
+                )
+            )}
         </select>
         <input
           type="date"
@@ -158,67 +196,70 @@ const AdminAttendance: FC = () => {
           <CardTitle>Registre des présences</CardTitle>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <div className="text-center py-8">Chargement...</div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="px-6 py-3 text-left text-sm font-medium text-gray-500">ID</th>
-                    <th className="px-6 py-3 text-left text-sm font-medium text-gray-500">
-                      Étudiant
-                    </th>
-                    <th className="px-6 py-3 text-left text-sm font-medium text-gray-500">Cours</th>
-                    <th className="px-6 py-3 text-left text-sm font-medium text-gray-500">Date</th>
-                    <th className="px-6 py-3 text-left text-sm font-medium text-gray-500">Heure</th>
-                    <th className="px-6 py-3 text-left text-sm font-medium text-gray-500">Statut</th>
-                    <th className="px-6 py-3 text-left text-sm font-medium text-gray-500">
-                      Empreinte vérifiée
-                    </th>
-                    <th className="px-6 py-3 text-left text-sm font-medium text-gray-500">
-                      Vérifié par
-                    </th>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b">
+                  <th className="px-6 py-3 text-left text-sm font-medium text-gray-500">
+                    ID
+                  </th>
+                  <th className="px-6 py-3 text-left text-sm font-medium text-gray-500">
+                    Étudiant
+                  </th>
+                  <th className="px-6 py-3 text-left text-sm font-medium text-gray-500">
+                    Cours
+                  </th>
+                  <th className="px-6 py-3 text-left text-sm font-medium text-gray-500">
+                    Date
+                  </th>
+                  <th className="px-6 py-3 text-left text-sm font-medium text-gray-500">
+                    Statut
+                  </th>
+                  <th className="px-6 py-3 text-left text-sm font-medium text-gray-500">
+                    Professeur
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {filteredRecords.map((record) => (
+                  <tr key={record.id}>
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                      {record.id}
+                    </td>
+                    <td className="px-6 py-4 font-medium text-gray-900">
+                      {record.student?.name}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-500">
+                      {record.course?.name}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-500">
+                      {record.formattedDate}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span
+                        className={`px-3 py-1 rounded-full text-sm ${getStatusColor(
+                          record.status
+                        )}`}
+                      >
+                        {record.status === "present"
+                          ? "Présent"
+                          : record.status === "absent"
+                          ? "Absent"
+                          : "En retard"}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-500">
+                      {record.course?.professor?.name}
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {filteredRecords.map((record) => (
-                    <tr key={record.id}>
-                      <td className="px-6 py-4 text-sm text-gray-900">{record.studentId}</td>
-                      <td className="px-6 py-4 font-medium text-gray-900">{record.studentName}</td>
-                      <td className="px-6 py-4 text-sm text-gray-500">{record.course}</td>
-                      <td className="px-6 py-4 text-sm text-gray-500">{record.date}</td>
-                      <td className="px-6 py-4 text-sm text-gray-500">{record.time}</td>
-                      <td className="px-6 py-4">
-                        <span
-                          className={`px-3 py-1 rounded-full text-sm ${getStatusColor(
-                            record.status
-                          )}`}
-                        >
-                          {record.status === 'present' ? 'Présent' : 
-                           record.status === 'absent' ? 'Absent' : 'En retard'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`px-3 py-1 rounded-full text-sm ${
-                          record.fingerprintVerified 
-                            ? 'bg-green-100 text-green-700' 
-                            : 'bg-gray-100 text-gray-700'
-                        }`}>
-                          {record.fingerprintVerified ? 'Oui' : 'Non'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">{record.verifiedBy}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                ))}
+              </tbody>
+            </table>
+          </div>
         </CardContent>
       </Card>
     </div>
   );
 };
 
-export default AdminAttendance; 
+export default AdminAttendance;

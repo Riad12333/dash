@@ -1,15 +1,23 @@
-'use client';
+"use client";
 
-import { FC } from 'react';
-import Link from 'next/link';
-import { motion } from 'framer-motion';
+import { FC } from "react";
+import Link from "next/link";
+import { motion } from "framer-motion";
+import { useSession } from "next-auth/react";
+import { redirect } from "next/navigation";
 
 const SignInPage: FC = () => {
+  const { status, data } = useSession();
+
+  console.log("status : ", status);
+  if (status === "authenticated") {
+    redirect(`/${data?.user?.role}`);
+  }
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
       <div className="absolute inset-0 z-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-blue-100 via-indigo-100 to-purple-100 opacity-50" />
-      
-      <motion.div 
+
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
@@ -24,8 +32,8 @@ const SignInPage: FC = () => {
           >
             <span className="text-3xl text-white">👋</span>
           </motion.div>
-          
-          <motion.h2 
+
+          <motion.h2
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
@@ -33,8 +41,8 @@ const SignInPage: FC = () => {
           >
             Système de Gestion de Présence
           </motion.h2>
-          
-          <motion.p 
+
+          <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.4 }}
@@ -44,48 +52,66 @@ const SignInPage: FC = () => {
           </motion.p>
         </div>
 
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5 }}
           className="mt-12 space-y-6"
         >
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-            <Link href="/student/login" 
-                  className="group relative w-full flex items-center justify-center py-4 px-6 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-200">
+            <Link
+              href="/student/login"
+              className="group relative w-full flex items-center justify-center py-4 px-6 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
+            >
               <span className="absolute left-6 text-2xl">👨‍🎓</span>
               <span className="font-medium text-lg">Espace Étudiant</span>
-              <span className="absolute right-6 opacity-0 group-hover:opacity-100 transition-opacity duration-200">→</span>
+              <span className="absolute right-6 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                →
+              </span>
             </Link>
           </motion.div>
 
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-            <Link href="/teacher/login"
-                  className="group relative w-full flex items-center justify-center py-4 px-6 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-200">
+            <Link
+              href="/teacher/login"
+              className="group relative w-full flex items-center justify-center py-4 px-6 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
+            >
               <span className="absolute left-6 text-2xl">👨‍🏫</span>
               <span className="font-medium text-lg">Espace Professeur</span>
-              <span className="absolute right-6 opacity-0 group-hover:opacity-100 transition-opacity duration-200">→</span>
+              <span className="absolute right-6 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                →
+              </span>
             </Link>
           </motion.div>
 
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-            <Link href="/admin/login"
-                  className="group relative w-full flex items-center justify-center py-4 px-6 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-200">
+            <Link
+              href="/admin/login"
+              className="group relative w-full flex items-center justify-center py-4 px-6 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
+            >
               <span className="absolute left-6 text-2xl">👨‍💼</span>
               <span className="font-medium text-lg">Espace Administrateur</span>
-              <span className="absolute right-6 opacity-0 group-hover:opacity-100 transition-opacity duration-200">→</span>
+              <span className="absolute right-6 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                →
+              </span>
             </Link>
           </motion.div>
         </motion.div>
 
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.6 }}
           className="mt-8 text-center"
         >
           <p className="text-sm text-gray-500">
-            Besoin d'aide ? <a href="#" className="text-blue-600 hover:text-blue-700 font-medium">Contactez-nous</a>
+            Besoin d aide ?{" "}
+            <a
+              href="#"
+              className="text-blue-600 hover:text-blue-700 font-medium"
+            >
+              Contactez-nous
+            </a>
           </p>
         </motion.div>
       </motion.div>
