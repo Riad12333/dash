@@ -38,72 +38,204 @@ export async function GET() {
         { status: 401 }
       );
     }
-
-    // Fetch all attendance records with related data
-    const attendance = await prisma.attendance.findMany({
-      include: {
-        students: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            fingerprint_id: true,
+    let formattedAttendance: any[] = [];
+    if (session.user?.role === "admin") {
+      // Fetch all attendance records with related data
+      const attendance = await prisma.attendance.findMany({
+        include: {
+          students: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              fingerprint_id: true,
+            },
           },
-        },
-        courses: {
-          select: {
-            id: true,
-            name: true,
-            professors: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
+          courses: {
+            select: {
+              id: true,
+              name: true,
+              professors: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                },
               },
             },
           },
         },
-      },
-      orderBy: {
-        timestamp: "desc",
-      },
-    });
+        orderBy: {
+          timestamp: "desc",
+        },
+      });
 
-    // Transform the data to include formatted dates and complete information
-    const formattedAttendance = attendance.map((record) => ({
-      id: record.id,
-      timestamp: record.timestamp,
-      status: record.statut,
-      student: record.students
-        ? {
-            id: record.students.id,
-            name: record.students.name,
-            email: record.students.email,
-            fingerprint_id: record.students.fingerprint_id,
-          }
-        : null,
-      course: record.courses
-        ? {
-            id: record.courses.id,
-            name: record.courses.name,
-            professor: record.courses.professors
-              ? {
-                  id: record.courses.professors.id,
-                  name: record.courses.professors.name,
-                  email: record.courses.professors.email,
-                }
-              : null,
-          }
-        : null,
-      formattedDate: record.timestamp.toLocaleDateString("fr-FR", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-    }));
-
+      // Transform the data to include formatted dates and complete information
+      formattedAttendance = attendance.map((record) => ({
+        id: record.id,
+        timestamp: record.timestamp,
+        status: record.statut,
+        student: record.students
+          ? {
+              id: record.students.id,
+              name: record.students.name,
+              email: record.students.email,
+              fingerprint_id: record.students.fingerprint_id,
+            }
+          : null,
+        course: record.courses
+          ? {
+              id: record.courses.id,
+              name: record.courses.name,
+              professor: record.courses.professors
+                ? {
+                    id: record.courses.professors.id,
+                    name: record.courses.professors.name,
+                    email: record.courses.professors.email,
+                  }
+                : null,
+            }
+          : null,
+        formattedDate: record.timestamp.toLocaleDateString("fr-FR", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      }));
+    }
+    if (session.user?.role === "teacher") {
+      const attendance = await prisma.attendance.findMany({
+        where: {
+          courses: {
+            professeur_id: session.user.id,
+          },
+        },
+        include: {
+          students: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              fingerprint_id: true,
+            },
+          },
+          courses: {
+            select: {
+              id: true,
+              name: true,
+              professors: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                },
+              },
+            },
+          },
+        },
+      });
+      formattedAttendance = attendance.map((record) => ({
+        id: record.id,
+        timestamp: record.timestamp,
+        status: record.statut,
+        student: record.students
+          ? {
+              id: record.students.id,
+              name: record.students.name,
+              email: record.students.email,
+              fingerprint_id: record.students.fingerprint_id,
+            }
+          : null,
+        course: record.courses
+          ? {
+              id: record.courses.id,
+              name: record.courses.name,
+              professor: record.courses.professors
+                ? {
+                    id: record.courses.professors.id,
+                    name: record.courses.professors.name,
+                    email: record.courses.professors.email,
+                  }
+                : null,
+            }
+          : null,
+        formattedDate: record.timestamp.toLocaleDateString("fr-FR", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      }));
+    }
+    if (session.user?.role === "student") {
+      const attendance = await prisma.attendance.findMany({
+        where: {
+          student_id: session.user.id,
+          courses: {
+            section_id: session.user.section_id,
+          },
+        },
+        include: {
+          students: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              fingerprint_id: true,
+            },
+          },
+          courses: {
+            select: {
+              id: true,
+              name: true,
+              professors: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                },
+              },
+            },
+          },
+        },
+      });
+      formattedAttendance = attendance.map((record) => ({
+        id: record.id,
+        timestamp: record.timestamp,
+        status: record.statut,
+        student: record.students
+          ? {
+              id: record.students.id,
+              name: record.students.name,
+              email: record.students.email,
+              fingerprint_id: record.students.fingerprint_id,
+            }
+          : null,
+        course: record.courses
+          ? {
+              id: record.courses.id,
+              name: record.courses.name,
+              professor: record.courses.professors
+                ? {
+                    id: record.courses.professors.id,
+                    name: record.courses.professors.name,
+                    email: record.courses.professors.email,
+                  }
+                : null,
+            }
+          : null,
+        formattedDate: record.timestamp.toLocaleDateString("fr-FR", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      }));
+    }
     return NextResponse.json(
       {
         attendance: formattedAttendance,
@@ -130,6 +262,9 @@ export async function POST(request: NextRequest) {
         { error: "Authentication required" },
         { status: 401 }
       );
+    }
+    if (session.user?.role !== "admin") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
     const data = await request.json();

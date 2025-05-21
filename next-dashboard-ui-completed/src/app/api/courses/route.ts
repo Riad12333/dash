@@ -31,68 +31,199 @@ export async function GET() {
       );
     }
 
-    // Fetch all courses with related professor data
-    const courses = await prisma.courses.findMany({
-      include: {
-        professors: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
+    if (session.user?.role === "admin") {
+      // Fetch all courses with related professor data
+      const courses = await prisma.courses.findMany({
+        include: {
+          professors: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+          attendance: {
+            select: {
+              id: true,
+              timestamp: true,
+              statut: true,
+            },
+          },
+          sections: {
+            select: {
+              id: true,
+              name: true,
+              academic_year_id: true,
+            },
           },
         },
-        attendance: {
-          select: {
-            id: true,
-            timestamp: true,
-            statut: true,
-          },
-        },
-        sections: {
-          select: {
-            id: true,
-            name: true,
-            academic_year_id: true,
-          },
-        },
-      },
-    });
+      });
 
-    // Transform the data to include additional statistics
-    const transformedCourses = courses.map((course) => ({
-      id: course.id,
-      name: course.name,
-      professor: course.professors
-        ? {
-            id: course.professors.id,
-            name: course.professors.name,
-            email: course.professors.email,
-          }
-        : null,
-      section: course.sections
-        ? {
-            id: course.sections.id,
-            name: course.sections.name,
-            year: course.sections.academic_year_id,
-          }
-        : null,
-      totalSessions: course.attendance.length,
-      attendanceRate:
-        course.attendance.length > 0
-          ? (course.attendance.filter(
-              (a) => a.statut?.toLowerCase() === "present"
-            ).length /
-              course.attendance.length) *
-            100
-          : 0,
-    }));
-    return NextResponse.json(
-      {
-        courses: transformedCourses,
-        total: transformedCourses.length,
-      },
-      { status: 200 }
-    );
+      // Transform the data to include additional statistics
+      const transformedCourses = courses.map((course) => ({
+        id: course.id,
+        name: course.name,
+        professor: course.professors
+          ? {
+              id: course.professors.id,
+              name: course.professors.name,
+              email: course.professors.email,
+            }
+          : null,
+        section: course.sections
+          ? {
+              id: course.sections.id,
+              name: course.sections.name,
+              year: course.sections.academic_year_id,
+            }
+          : null,
+        totalSessions: course.attendance.length,
+        attendanceRate:
+          course.attendance.length > 0
+            ? (course.attendance.filter(
+                (a) => a.statut?.toLowerCase() === "present"
+              ).length /
+                course.attendance.length) *
+              100
+            : 0,
+      }));
+      return NextResponse.json(
+        {
+          courses: transformedCourses,
+          total: transformedCourses.length,
+        },
+        { status: 200 }
+      );
+    }
+
+    if (session.user?.role === "teacher") {
+      const courses = await prisma.courses.findMany({
+        where: {
+          professeur_id: session.user.id,
+        },
+        include: {
+          professors: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+          attendance: {
+            select: {
+              id: true,
+              timestamp: true,
+              statut: true,
+            },
+          },
+          sections: {
+            select: {
+              id: true,
+              name: true,
+              academic_year_id: true,
+            },
+          },
+        },
+      });
+      const transformedCourses = courses.map((course) => ({
+        id: course.id,
+        name: course.name,
+        professor: course.professors
+          ? {
+              id: course.professors.id,
+              name: course.professors.name,
+              email: course.professors.email,
+            }
+          : null,
+        section: course.sections
+          ? {
+              id: course.sections.id,
+              name: course.sections.name,
+              year: course.sections.academic_year_id,
+            }
+          : null,
+        totalSessions: course.attendance.length,
+        attendanceRate:
+          course.attendance.length > 0
+            ? (course.attendance.filter(
+                (a) => a.statut?.toLowerCase() === "present"
+              ).length /
+                course.attendance.length) *
+              100
+            : 0,
+      }));
+      return NextResponse.json(
+        {
+          courses: transformedCourses,
+          total: transformedCourses.length,
+        },
+        { status: 200 }
+      );
+    }
+    if (session.user?.role === "student") {
+      const courses = await prisma.courses.findMany({
+        where: {
+          section_id: session.user.section_id,
+        },
+        include: {
+          professors: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+          attendance: {
+            select: {
+              id: true,
+              timestamp: true,
+              statut: true,
+            },
+          },
+          sections: {
+            select: {
+              id: true,
+              name: true,
+              academic_year_id: true,
+            },
+          },
+        },
+      });
+      const transformedCourses = courses.map((course) => ({
+        id: course.id,
+        name: course.name,
+        professor: course.professors
+          ? {
+              id: course.professors.id,
+              name: course.professors.name,
+              email: course.professors.email,
+            }
+          : null,
+        section: course.sections
+          ? {
+              id: course.sections.id,
+              name: course.sections.name,
+              year: course.sections.academic_year_id,
+            }
+          : null,
+        totalSessions: course.attendance.length,
+        attendanceRate:
+          course.attendance.length > 0
+            ? (course.attendance.filter(
+                (a) => a.statut?.toLowerCase() === "present"
+              ).length /
+                course.attendance.length) *
+              100
+            : 0,
+      }));
+      return NextResponse.json(
+        {
+          courses: transformedCourses,
+          total: transformedCourses.length,
+        },
+        { status: 200 }
+      );
+    }
   } catch (error) {
     console.error("Error fetching courses:", error);
     return NextResponse.json(

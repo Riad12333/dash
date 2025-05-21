@@ -1,50 +1,46 @@
-'use client';
+"use client";
 
-import { FC, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-
-interface Course {
-  id: string;
-  name: string;
-  code: string;
-  students: number;
-  schedule: string;
-  room: string;
-  attendance: number;
-}
+import { FC, useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { useCourses } from "@/hooks/useCourses";
+import { Loader2 } from "lucide-react";
 
 const TeacherCourses: FC = () => {
-  const [activeTab, setActiveTab] = useState<'current' | 'all'>('current');
+  const [activeTab, setActiveTab] = useState<"current" | "all">("current");
+  const router = useRouter();
+  const { status, data: session } = useSession({
+    required: true,
+    onUnauthenticated() {
+      router.push("/sign-in");
+    },
+  });
+  const { courses, isLoading, error, stats } = useCourses();
 
-  const courses: Course[] = [
-    {
-      id: '1',
-      name: 'Introduction à la Blockchain',
-      code: 'INFO401',
-      students: 45,
-      schedule: 'Lundi 08:00-10:00',
-      room: '301',
-      attendance: 92,
-    },
-    {
-      id: '2',
-      name: 'IoT et Systèmes Embarqués',
-      code: 'INFO402',
-      students: 38,
-      schedule: 'Mardi 10:15-12:15',
-      room: '302',
-      attendance: 88,
-    },
-    {
-      id: '3',
-      name: 'Intelligence Artificielle',
-      code: 'INFO403',
-      students: 50,
-      schedule: 'Mercredi 14:00-16:00',
-      room: '303',
-      attendance: 95,
-    },
-  ];
+  if (status === "loading" || isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <div className="bg-red-50 text-red-800 p-4 rounded-md">{error}</div>
+      </div>
+    );
+  }
+
+  const handleManageAttendance = (courseId: number) => {
+    router.push(`/teacher/attendance?courseId=${courseId}`);
+  };
+
+  const handleViewDetails = (courseId: number) => {
+    router.push(`/teacher/courses/${courseId}`);
+  };
 
   return (
     <div className="space-y-6">
@@ -53,24 +49,32 @@ const TeacherCourses: FC = () => {
         <Card>
           <CardContent className="pt-6">
             <div className="text-center">
-              <p className="text-sm font-medium text-gray-500">Total des cours</p>
-              <p className="text-3xl font-bold text-gray-900">5</p>
+              <p className="text-sm font-medium text-gray-500">
+                Total des cours
+              </p>
+              <p className="text-3xl font-bold text-gray-900">{stats.total}</p>
             </div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
             <div className="text-center">
-              <p className="text-sm font-medium text-gray-500">Total des étudiants</p>
-              <p className="text-3xl font-bold text-gray-900">133</p>
+              <p className="text-sm font-medium text-gray-500">Cours actifs</p>
+              <p className="text-3xl font-bold text-gray-900">
+                {stats.activeCourses}
+              </p>
             </div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
             <div className="text-center">
-              <p className="text-sm font-medium text-gray-500">Moyenne de présence</p>
-              <p className="text-3xl font-bold text-gray-900">91.7%</p>
+              <p className="text-sm font-medium text-gray-500">
+                Moyenne de présence
+              </p>
+              <p className="text-3xl font-bold text-gray-900">
+                {stats.averageAttendance}%
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -80,21 +84,21 @@ const TeacherCourses: FC = () => {
       <div className="flex space-x-4 border-b">
         <button
           className={`pb-4 px-4 ${
-            activeTab === 'current'
-              ? 'border-b-2 border-blue-600 text-blue-600'
-              : 'text-gray-500'
+            activeTab === "current"
+              ? "border-b-2 border-blue-600 text-blue-600"
+              : "text-gray-500"
           }`}
-          onClick={() => setActiveTab('current')}
+          onClick={() => setActiveTab("current")}
         >
           Cours actuels
         </button>
         <button
           className={`pb-4 px-4 ${
-            activeTab === 'all'
-              ? 'border-b-2 border-blue-600 text-blue-600'
-              : 'text-gray-500'
+            activeTab === "all"
+              ? "border-b-2 border-blue-600 text-blue-600"
+              : "text-gray-500"
           }`}
-          onClick={() => setActiveTab('all')}
+          onClick={() => setActiveTab("all")}
         >
           Tous les cours
         </button>
@@ -108,10 +112,12 @@ const TeacherCourses: FC = () => {
               <div className="flex justify-between items-start">
                 <div>
                   <CardTitle>{course.name}</CardTitle>
-                  <p className="text-sm text-gray-500 mt-1">{course.code}</p>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Section: {course.section?.name}
+                  </p>
                 </div>
                 <span className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-sm">
-                  {course.students} étudiants
+                  {course.totalSessions} sessions
                 </span>
               </div>
             </CardHeader>
@@ -119,12 +125,12 @@ const TeacherCourses: FC = () => {
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-gray-500">Horaire</p>
-                    <p className="font-medium">{course.schedule}</p>
+                    <p className="text-sm text-gray-500">Professeur</p>
+                    <p className="font-medium">{course.professor?.name}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">Salle</p>
-                    <p className="font-medium">{course.room}</p>
+                    <p className="text-sm text-gray-500">Année</p>
+                    <p className="font-medium">{course.section?.year}</p>
                   </div>
                 </div>
                 <div>
@@ -132,20 +138,26 @@ const TeacherCourses: FC = () => {
                   <div className="relative pt-1">
                     <div className="overflow-hidden h-2 text-xs flex rounded bg-blue-100">
                       <div
-                        style={{ width: `${course.attendance}%` }}
+                        style={{ width: `${course.attendanceRate}%` }}
                         className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-blue-600"
                       ></div>
                     </div>
                     <span className="text-sm font-medium text-blue-600 mt-1">
-                      {course.attendance}%
+                      {course.attendanceRate}%
                     </span>
                   </div>
                 </div>
                 <div className="flex space-x-3">
-                  <button className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                  <button
+                    onClick={() => handleManageAttendance(course.id)}
+                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
                     Gérer la présence
                   </button>
-                  <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
+                  <button
+                    onClick={() => handleViewDetails(course.id)}
+                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                  >
                     Détails
                   </button>
                 </div>
@@ -154,10 +166,8 @@ const TeacherCourses: FC = () => {
           </Card>
         ))}
       </div>
-
-     
     </div>
   );
 };
 
-export default TeacherCourses; 
+export default TeacherCourses;

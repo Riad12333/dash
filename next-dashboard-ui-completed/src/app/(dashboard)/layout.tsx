@@ -28,7 +28,7 @@ const DashboardLayout: FC<DashboardLayoutProps> = ({ children }) => {
       case "student":
         return [
           { href: "/student", label: "Tableau de bord", icon: "📊" },
-          { href: "/student/courses", label: "Cours", icon: "📚" },
+          { href: "/teacher/attendance", label: "Présence", icon: "✅" },
           { href: "/student/schedule", label: "Emploi du temps", icon: "📅" },
           { href: "/student/profile", label: "Profil", icon: "👤" },
         ];

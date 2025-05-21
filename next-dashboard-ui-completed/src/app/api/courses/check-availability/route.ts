@@ -88,7 +88,7 @@ export async function POST(request: Request) {
         conflicts.push({
           index: i,
           type: "professor",
-          message: `L'enseignant a déjà un cours à cet horaire (${professorConflicts[0].courses.name})`,
+          message: `L'enseignant a déjà un cours à cet horaire (${professorConflicts[0].courses?.name})`,
         });
       }
 
@@ -121,7 +121,7 @@ export async function POST(request: Request) {
         conflicts.push({
           index: i,
           type: "room",
-          message: `La salle est déjà réservée à cet horaire (${roomConflicts[0].courses.name})`,
+          message: `La salle est déjà réservée à cet horaire (${roomConflicts[0].courses?.name})`,
         });
       }
 
@@ -156,7 +156,7 @@ export async function POST(request: Request) {
         conflicts.push({
           index: i,
           type: "section",
-          message: `La section a déjà un cours à cet horaire (${sectionConflicts[0].courses.name})`,
+          message: `La section a déjà un cours à cet horaire (${sectionConflicts[0].courses?.name})`,
         });
       }
     }

@@ -15,12 +15,13 @@ export async function GET() {
       );
     }
     if (session.user?.role === "admin") {
-      // Fetch all professors
-      const professors = await prisma.professors.findMany({
+      // Fetch all students
+      const students = await prisma.students.findMany({
         select: {
           id: true,
           name: true,
           email: true,
+          section_id: true,
         },
         orderBy: {
           name: "asc",
@@ -29,29 +30,36 @@ export async function GET() {
 
       return NextResponse.json(
         {
-          professors,
-          total: professors.length,
+          students,
+          total: students.length,
         },
         { status: 200 }
       );
     }
-    if (session.user?.role === "teacher") {
-      const professors = await prisma.professors.findMany({
+    if (session.user?.role === "student") {
+      const students = await prisma.students.findMany({
         where: {
           id: session.user.id,
+        },
+
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          section_id: true,
         },
       });
       return NextResponse.json(
         {
-          professors,
+          students,
         },
         { status: 200 }
       );
     }
   } catch (error) {
-    console.error("Error fetching professors:", error);
+    console.error("Error fetching students:", error);
     return NextResponse.json(
-      { error: "Failed to fetch professors" },
+      { error: "Failed to fetch students" },
       { status: 500 }
     );
   }

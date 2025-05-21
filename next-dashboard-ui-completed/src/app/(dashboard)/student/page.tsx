@@ -1,240 +1,300 @@
-'use client';
+"use client";
 
-import { FC } from 'react';
-import StatsCards from '@/components/StatsCards';
-import AttendanceChart from '@/components/AttendanceChart';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import CourseSchedule from '@/components/CourseSchedule';
+import { FC } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { useSchedules } from "@/hooks/useSchedules";
+import { useCourses } from "@/hooks/useCourses";
+import { useAttendance } from "@/hooks/useAttendance";
+import {
+  Loader2,
+  Users,
+  BookOpen,
+  Calendar,
+  GraduationCap,
+  Clock,
+  MapPin,
+  ChevronRight,
+  ClipboardList,
+  BookText,
+} from "lucide-react";
 
 const StudentDashboard: FC = () => {
-  const stats = [
-    {
-      label: 'Taux de présence',
-      value: '95%',
-      change: 2.5,
-      icon: '📊',
-      color: 'green' as const,
+  const router = useRouter();
+  const { status, data: session } = useSession({
+    required: true,
+    onUnauthenticated() {
+      router.push("/sign-in");
     },
-    {
-      label: 'Moyenne générale',
-      value: '15.5/20',
-      change: 0.5,
-      icon: '📈',
-      color: 'blue' as const,
-    },
-    {
-      label: 'Devoirs à rendre',
-      value: '3',
-      icon: '📝',
-      color: 'yellow' as const,
-    },
-    {
-      label: 'Examens à venir',
-      value: '2',
-      icon: '📚',
-      color: 'red' as const,
-    },
-  ];
+  });
 
-  const attendanceData = [
-    { date: 'Lun', present: 1, absent: 0, late: 0 },
-    { date: 'Mar', present: 1, absent: 0, late: 0 },
-    { date: 'Mer', present: 1, absent: 0, late: 0 },
-    { date: 'Jeu', present: 0, absent: 1, late: 0 },
-    { date: 'Ven', present: 1, absent: 0, late: 0 },
-  ];
+  const { schedules, isLoading: schedulesLoading } = useSchedules();
+  const { courses, isLoading: coursesLoading } = useCourses();
+  const { attendance, isLoading: attendanceLoading } = useAttendance();
 
-  const todayCourses = [
-    {
-      id: '1',
-      name: 'Intelligence Artificielle (INFO401)',
-      professor: 'Dr. YEDDOU FAROUK',
-      room: '301',
-      day: 'Lundi',
-      startTime: '08:00',
-      endTime: '10:00',
-      type: 'CM',
-    },
-    {
-      id: '2',
-      name: 'Systèmes Distribués (INFO402)',
-      professor: 'Dr. GUENFAF YOUCEF',
-      room: '302',
-      day: 'Lundi',
-      startTime: '10:15',
-      endTime: '12:15',
-      type: 'TP',
-    },
-  ];
+  if (
+    status === "loading" ||
+    schedulesLoading ||
+    coursesLoading ||
+    attendanceLoading
+  ) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+      </div>
+    );
+  }
+  console.log("schedules", schedules);
+  // Filter schedules and courses for the current student's section
+  const studentSchedules = schedules.filter((schedule) => {
+    console.log("schedule", schedule);
+    return schedule.course_id.section_id === session?.user?.section_id;
+  });
 
-  const upcomingDeadlines = [
-    {
-      id: 1,
-      course: 'Intelligence Artificielle (INFO401)',
-      type: 'Projet',
-      deadline: '2024-03-25',
-      status: 'En cours',
-    },
-    {
-      id: 2,
-      course: 'Systèmes Distribués (INFO402)',
-      type: 'TP',
-      deadline: '2024-03-28',
-      status: 'À faire',
-    },
-  ];
+  const studentCourses = courses.filter((course) => {
+    return studentSchedules.some(
+      (schedule) => schedule.course_id.id === course.id
+    );
+  });
 
-  const recentGrades = [
-    {
-      id: 1,
-      course: 'Intelligence Artificielle (INFO401)',
-      type: 'TP1',
-      grade: 16,
-      date: '2024-03-15',
-    },
-    {
-      id: 2,
-      course: 'Systèmes Distribués (INFO402)',
-      type: 'Contrôle',
-      grade: 15,
-      date: '2024-03-10',
-    },
-  ];
+  // Get today's courses
+  const today = new Date().toLocaleDateString("fr-FR", { weekday: "long" });
+  const todaysCourses = studentSchedules.filter((schedule) => {
+    return schedule.day.toLowerCase() === today.toLowerCase();
+  });
+
+  // Calculate attendance stats for the student
+  const studentAttendance = attendance.filter(
+    (record) => record.student.id === session?.user?.id
+  );
+
+  const presentCount = studentAttendance.filter(
+    (record) => record.status === "present"
+  ).length;
+  const absentCount = studentAttendance.filter(
+    (record) => record.status === "absent"
+  ).length;
+  const lateCount = studentAttendance.filter(
+    (record) => record.status === "late"
+  ).length;
+
+  const attendanceRate = studentAttendance.length
+    ? Math.round((presentCount / studentAttendance.length) * 100)
+    : 0;
+
+  const formatTime = (timeString: string) => {
+    return new Date(timeString).toLocaleTimeString("fr-FR", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+  };
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
       {/* Stats Cards */}
-      <StatsCards stats={stats} />
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Attendance Chart */}
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle>Présences de la semaine</CardTitle>
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-none shadow-lg hover:shadow-xl transition-all duration-300">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-blue-700">
+              Total des Cours
+            </CardTitle>
+            <div className="p-2 bg-blue-100 rounded-full">
+              <BookOpen className="h-5 w-5 text-blue-600" />
+            </div>
           </CardHeader>
           <CardContent>
-            <AttendanceChart data={attendanceData} title="Présences de la semaine" />
+            <div className="text-3xl font-bold text-blue-700">
+              {studentCourses.length}
+            </div>
+            <p className="text-xs text-blue-600 mt-1">
+              Cours inscrits cette année
+            </p>
           </CardContent>
         </Card>
 
-        {/* Today's Schedule */}
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle>Cours d'aujourd'hui</CardTitle>
+        <Card className="bg-gradient-to-br from-green-50 to-green-100 border-none shadow-lg hover:shadow-xl transition-all duration-300">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-green-700">
+              Cours d&apos;Aujourd&apos;hui
+            </CardTitle>
+            <div className="p-2 bg-green-100 rounded-full">
+              <Calendar className="h-5 w-5 text-green-600" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {todayCourses.map((course) => (
-                <div
-                  key={course.id}
-                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:shadow-md transition-all duration-200"
-                >
-                  <div className="flex items-center space-x-4">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white ${
-                      course.type === 'CM' ? 'bg-blue-500' : 'bg-green-500'
-                    }`}>
-                      {course.type === 'CM' ? '📚' : '💻'}
-                    </div>
-                    <div>
-                      <h3 className="font-medium">{course.name}</h3>
-                      <p className="text-sm text-gray-500">
-                        {course.professor} • Salle {course.room}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-medium">{course.startTime} - {course.endTime}</p>
-                    <p className="text-sm text-gray-500">{course.type}</p>
-                  </div>
-                </div>
-              ))}
+            <div className="text-3xl font-bold text-green-700">
+              {todaysCourses.length}
             </div>
+            <p className="text-xs text-green-600 mt-1">
+              {todaysCourses.length === 0
+                ? "Aucun cours programmé"
+                : "Cours programmés aujourd&apos;hui"}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-none shadow-lg hover:shadow-xl transition-all duration-300">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-purple-700">
+              Taux de Présence
+            </CardTitle>
+            <div className="p-2 bg-purple-100 rounded-full">
+              <Users className="h-5 w-5 text-purple-600" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-purple-700">
+              {attendanceRate}%
+            </div>
+            <p className="text-xs text-purple-600 mt-1">
+              Taux de présence global
+            </p>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Upcoming Deadlines */}
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle>Échéances à venir</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {upcomingDeadlines.map((deadline) => (
-                <div
-                  key={deadline.id}
-                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:shadow-md transition-all duration-200"
-                >
-                  <div>
-                    <h3 className="font-medium">{deadline.course}</h3>
-                    <p className="text-sm text-gray-500">
-                      {deadline.type} • Date limite: {deadline.deadline}
-                    </p>
-                  </div>
-                  <span className={`px-3 py-1 rounded-full text-sm ${
-                    deadline.status === 'En cours'
-                      ? 'bg-yellow-100 text-yellow-800'
-                      : 'bg-red-100 text-red-800'
-                  }`}>
-                    {deadline.status}
-                  </span>
-                </div>
-              ))}
+      {/* Today's Courses */}
+      <Card className="border-none shadow-lg">
+        <CardHeader className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-t-lg">
+          <CardTitle className="text-white flex items-center gap-2">
+            <GraduationCap className="h-5 w-5" />
+            Cours d&apos;Aujourd&apos;hui
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-6">
+          {todaysCourses.length === 0 ? (
+            <div className="text-center py-8">
+              <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+              <p className="text-gray-500">
+                Aucun cours programmé pour aujourd&apos;hui
+              </p>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Recent Grades */}
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle>Notes récentes</CardTitle>
-          </CardHeader>
-          <CardContent>
+          ) : (
             <div className="space-y-4">
-              {recentGrades.map((grade) => (
-                <div
-                  key={grade.id}
-                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:shadow-md transition-all duration-200"
-                >
-                  <div>
-                    <h3 className="font-medium">{grade.course}</h3>
-                    <p className="text-sm text-gray-500">
-                      {grade.type} • {grade.date}
-                    </p>
+              {todaysCourses.map((schedule) => {
+                const course = studentCourses.find(
+                  (c) => c.id === schedule.course_id.id
+                );
+                return (
+                  <div
+                    key={schedule.id}
+                    className="flex items-center justify-between p-4 bg-white rounded-lg border border-gray-100 hover:border-blue-200 transition-all duration-200"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 bg-blue-50 rounded-lg">
+                        <BookText className="h-6 w-6 text-blue-600" />
+                      </div>
+                      <div>
+                        <h3 className="font-medium text-gray-900">
+                          {course?.name || "Cours sans nom"}
+                        </h3>
+                        <div className="flex items-center gap-4 mt-1 text-sm text-gray-500">
+                          <div className="flex items-center gap-1">
+                            <Clock className="h-4 w-4" />
+                            {formatTime(schedule.start_time)} -{" "}
+                            {formatTime(schedule.end_time)}
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <MapPin className="h-4 w-4" />
+                            Salle {schedule.room}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() =>
+                        router.push(
+                          `/student/attendance?courseId=${course?.id}`
+                        )
+                      }
+                      className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center gap-2"
+                    >
+                      <ClipboardList className="h-4 w-4" />
+                      Voir la Présence
+                    </button>
                   </div>
-                  <div className="text-2xl font-bold text-blue-600">
-                    {grade.grade}/20
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
-          </CardContent>
-        </Card>
-      </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Quick Actions */}
-      <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle>Actions rapides</CardTitle>
+      <Card className="border-none shadow-lg">
+        <CardHeader className="bg-gradient-to-r from-gray-800 to-gray-900 rounded-t-lg">
+          <CardTitle className="text-white">Actions Rapides</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <button className="p-4 text-center rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all duration-200">
-              <span className="text-2xl mb-2 block">📱</span>
-              Scanner QR Code
+        <CardContent className="p-6">
+          <div className="grid gap-4 md:grid-cols-2">
+            <button
+              onClick={() => router.push("/student/schedule")}
+              className="p-6 text-left bg-white rounded-lg border border-gray-100 hover:border-blue-200 hover:shadow-md transition-all duration-200 group"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-medium text-gray-900 group-hover:text-blue-600 transition-colors duration-200">
+                    Emploi du Temps
+                  </h3>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Consulter votre emploi du temps hebdomadaire
+                  </p>
+                </div>
+                <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-blue-600 transition-colors duration-200" />
+              </div>
             </button>
-            <button className="p-4 text-center rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-all duration-200">
-              <span className="text-2xl mb-2 block">📊</span>
-              Voir mes statistiques
+
+            <button
+              onClick={() => router.push("/student/attendance")}
+              className="p-6 text-left bg-white rounded-lg border border-gray-100 hover:border-blue-200 hover:shadow-md transition-all duration-200 group"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-medium text-gray-900 group-hover:text-blue-600 transition-colors duration-200">
+                    Historique des Présences
+                  </h3>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Consulter votre historique de présence
+                  </p>
+                </div>
+                <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-blue-600 transition-colors duration-200" />
+              </div>
             </button>
-            <button className="p-4 text-center rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 transition-all duration-200">
-              <span className="text-2xl mb-2 block">📅</span>
-              Emploi du temps
+
+            <button
+              onClick={() => router.push("/student/courses")}
+              className="p-6 text-left bg-white rounded-lg border border-gray-100 hover:border-blue-200 hover:shadow-md transition-all duration-200 group"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-medium text-gray-900 group-hover:text-blue-600 transition-colors duration-200">
+                    Mes Cours
+                  </h3>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Consulter la liste de vos cours
+                  </p>
+                </div>
+                <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-blue-600 transition-colors duration-200" />
+              </div>
             </button>
-            <button className="p-4 text-center rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-all duration-200">
-              <span className="text-2xl mb-2 block">📄</span>
-              Documents
+
+            <button
+              onClick={() => router.push("/student/scan")}
+              className="p-6 text-left bg-white rounded-lg border border-gray-100 hover:border-blue-200 hover:shadow-md transition-all duration-200 group"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-medium text-gray-900 group-hover:text-blue-600 transition-colors duration-200">
+                    Scanner QR Code
+                  </h3>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Scanner le QR code pour marquer votre présence
+                  </p>
+                </div>
+                <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-blue-600 transition-colors duration-200" />
+              </div>
             </button>
           </div>
         </CardContent>

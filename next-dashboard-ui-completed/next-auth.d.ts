@@ -7,6 +7,7 @@ declare module "next-auth" {
     name: string;
     role?: string;
     randomKey?: string;
+    section_id?: number;
   }
 
   interface Session extends DefaultSession {

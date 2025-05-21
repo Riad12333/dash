@@ -56,7 +56,6 @@ export const authOptions: NextAuthOptions = {
               email: credentials.email,
             },
           });
-          // console.log("user : ", user);
           if (!user) return null;
 
           const passwordHash = await bcrypt.compare(
@@ -70,6 +69,7 @@ export const authOptions: NextAuthOptions = {
             email: user.email,
             name: user.name,
             role: credentials.role,
+            section_id: user.section_id || undefined,
           };
         }
         if (credentials.role == "teacher") {
@@ -110,8 +110,9 @@ export const authOptions: NextAuthOptions = {
         user: {
           ...session.user,
           id: token.id,
-          role: token.role, // ✅ ADD THIS
+          role: token.role,
           randomKey: token.randomKey,
+          section_id: token.section_id,
         },
       };
     },
@@ -124,6 +125,7 @@ export const authOptions: NextAuthOptions = {
           id: u.id,
           randomKey: u.randomKey,
           role: u.role,
+          section_id: u.section_id,
         };
       }
       return token;

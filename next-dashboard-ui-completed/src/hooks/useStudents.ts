@@ -2,33 +2,26 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useToast } from "@/components/ui/use-toast";
 
-export interface Schedule {
+export interface Student {
   id: number;
-  course_id: {
-    id: number;
-    name: string;
-    section_id: number;
-  };
-  day: string;
-  start_time: string;
-  end_time: string;
-  room: string;
-  professor_id?: number;
+  name: string;
+  email: string;
+  section_id: number;
 }
 
-export const useSchedules = () => {
-  const [schedules, setSchedules] = useState<Schedule[]>([]);
+export const useStudents = () => {
+  const [students, setStudents] = useState<Student[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { data: session, status } = useSession();
   const { toast } = useToast();
 
-  const fetchSchedules = async () => {
+  const fetchstudents = async () => {
     try {
       setIsLoading(true);
       setError(null);
 
-      const res = await fetch("/api/schedules", {
+      const res = await fetch("/api/students", {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -42,12 +35,12 @@ export const useSchedules = () => {
             ? "Authentication required"
             : res.status === 403
             ? "Access denied"
-            : "Failed to fetch schedules"
+            : "Failed to fetch students"
         );
       }
 
       const data = await res.json();
-      setSchedules(data.schedules);
+      setStudents(data.students);
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "An error occurred";
@@ -64,14 +57,14 @@ export const useSchedules = () => {
 
   useEffect(() => {
     if (status === "authenticated") {
-      fetchSchedules();
+      fetchstudents();
     }
   }, [status]);
 
   return {
-    schedules,
+    students,
     isLoading,
     error,
-    fetchSchedules,
+    fetchstudents,
   };
 };

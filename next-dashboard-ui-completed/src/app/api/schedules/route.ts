@@ -39,13 +39,19 @@ export async function GET(request: NextRequest) {
     // Transform the data to match our interface
     const transformedSchedules = schedules.map((schedule) => ({
       id: schedule.id,
-      course_id: schedule.courses?.id || 0,
+      course_id: schedule.courses
+        ? {
+            id: schedule.courses.id,
+            name: schedule.courses.name,
+            section_id: schedule.courses.section_id,
+          }
+        : null,
       day: schedule.day_of_week,
       start_time: schedule.start_time.toISOString(),
       end_time: schedule.end_time.toISOString(),
       room: schedule.classrooms?.name || "N/A",
     }));
-
+    console.log("transformedSchedules", transformedSchedules);
     return NextResponse.json(
       {
         schedules: transformedSchedules,

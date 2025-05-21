@@ -1,93 +1,141 @@
-'use client';
+"use client";
 
-import { FC } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { FC } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { useSchedules } from "@/hooks/useSchedules";
+import { useCourses } from "@/hooks/useCourses";
+import { Loader2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
-const StudentSchedule: FC = () => {
-  const scheduleInfo = {
-    name: 'Master Informatique - S2',
-    year: '2023-2024',
-    semester: 'S2',
-    lastUpdated: '2024-03-15',
-    downloadUrl: '/schedules/master-info-s2.pdf',
+const DAYS_OF_WEEK = [
+  "Samedi",
+  "Dimanche",
+  "Lundi",
+  "Mardi",
+  "Mercredi",
+  "Jeudi",
+];
+
+const TeacherSchedule: FC = () => {
+  const router = useRouter();
+  const { status, data: session } = useSession({
+    required: true,
+    onUnauthenticated() {
+      router.push("/sign-in");
+    },
+  });
+
+  const {
+    schedules,
+    isLoading: schedulesLoading,
+    error: schedulesError,
+  } = useSchedules();
+  const {
+    courses,
+    isLoading: coursesLoading,
+    error: coursesError,
+  } = useCourses();
+
+  // Filter schedules for the current professo
+  console.log("session?.user?.name", session?.user?.section_id);
+  const studentSchedules = schedules.filter((schedule) => {
+    const course = courses.find((c) => c.id === schedule.course_id);
+
+    return course?.section?.id === session?.user?.section_id;
+  });
+
+  // Group schedules by day
+  const schedulesByDay = DAYS_OF_WEEK.reduce((acc, day) => {
+    acc[day] = studentSchedules.filter((schedule) => schedule.day === day);
+    return acc;
+  }, {} as Record<string, typeof studentSchedules>);
+
+  // Format time from ISO string to readable format
+  const formatTime = (timeString: string) => {
+    return new Date(timeString).toLocaleTimeString("fr-FR", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
   };
+
+  if (status === "loading" || schedulesLoading || coursesLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+      </div>
+    );
+  }
+
+  if (schedulesError || coursesError) {
+    return (
+      <div className="p-6">
+        <div className="bg-red-50 text-red-800 p-4 rounded-md">
+          {schedulesError || coursesError}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <h2 className="text-2xl font-bold text-gray-800">Mon emploi du temps</h2>
-        <p className="text-gray-600 mt-2">
-          {scheduleInfo.name} - {scheduleInfo.year}
-        </p>
-      </div>
-
-      {/* Schedule Card */}
       <Card>
         <CardHeader>
-          <div className="flex justify-between items-center">
-            <div>
-              <CardTitle>Emploi du temps actuel</CardTitle>
-              <p className="text-sm text-gray-500 mt-1">
-                Dernière mise à jour : {scheduleInfo.lastUpdated}
-              </p>
-            </div>
-            <a
-              href={scheduleInfo.downloadUrl}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Télécharger PDF
-            </a>
-          </div>
+          <CardTitle>Emploi du temps</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="aspect-[1.414/1] bg-gray-50 rounded-lg flex items-center justify-center">
-            <div className="text-center space-y-4">
-              <div className="text-6xl">📄</div>
-              <div className="text-gray-500">
-                Cliquez sur "Télécharger PDF" pour voir votre emploi du temps
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Additional Info */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Informations importantes</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="flex items-start space-x-3">
-              <div className="text-blue-600">ℹ️</div>
-              <div>
-                <p className="font-medium">Mises à jour régulières</p>
-                <p className="text-gray-600">
-                  L'emploi du temps est mis à jour chaque semaine. Vérifiez régulièrement les changements.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start space-x-3">
-              <div className="text-yellow-600">⚠️</div>
-              <div>
-                <p className="font-medium">Changements de dernière minute</p>
-                <p className="text-gray-600">
-                  Des notifications vous seront envoyées en cas de modification imprévue.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start space-x-3">
-              <div className="text-green-600">📱</div>
-              <div>
-                <p className="font-medium">Version mobile</p>
-                <p className="text-gray-600">
-                  Téléchargez le PDF sur votre téléphone pour un accès hors-ligne.
-                </p>
-              </div>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {DAYS_OF_WEEK.map((day) => (
+              <Card key={day} className="bg-white border-none shadow-lg">
+                <CardHeader className="border-b bg-gray-50">
+                  <CardTitle className="text-lg font-semibold text-gray-800">
+                    {day}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-4">
+                  {schedulesByDay[day]?.length > 0 ? (
+                    <div className="space-y-4">
+                      {schedulesByDay[day].map((schedule) => {
+                        const course = courses.find(
+                          (c) => c.id === schedule.course_id
+                        );
+                        return (
+                          <div
+                            key={schedule.id}
+                            className="bg-gray-50 p-4 rounded-lg space-y-2"
+                          >
+                            <div className="flex justify-between items-center">
+                              <Badge variant="secondary" className="text-sm">
+                                {course?.name || `Cours ${schedule.course_id}`}
+                              </Badge>
+                              <span className="text-sm text-gray-500">
+                                {formatTime(schedule.start_time)} -{" "}
+                                {formatTime(schedule.end_time)}
+                              </span>
+                            </div>
+                            <div className="text-sm text-gray-600">
+                              Salle: {schedule.room}
+                            </div>
+                            {course?.section && (
+                              <div className="text-sm text-gray-600">
+                                Section: {course.section.name} - Année{" "}
+                                {course.section.year}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500 text-center py-4">
+                      Aucun cours prévu
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
           </div>
         </CardContent>
       </Card>
@@ -95,4 +143,4 @@ const StudentSchedule: FC = () => {
   );
 };
 
-export default StudentSchedule; 
+export default TeacherSchedule;

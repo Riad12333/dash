@@ -17,6 +17,8 @@ export interface Course {
     name: string;
     year: number;
   };
+  totalSessions: number;
+  attendanceRate: number;
 }
 
 export interface CourseStats {
