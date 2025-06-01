@@ -39,19 +39,20 @@ const TeacherSchedule: FC = () => {
   } = useCourses();
 
   // Filter schedules for the current professo
-  console.log("session?.user?.name", session?.user?.section_id);
   const studentSchedules = schedules.filter((schedule) => {
-    const course = courses.find((c) => c.id === schedule.course_id);
+    const course = courses.find(
+      (c) => c.professor_id === schedule.course_id.professor_id
+    );
 
     return course?.section?.id === session?.user?.section_id;
   });
-
+  console.log("studentSchedules", studentSchedules);
   // Group schedules by day
   const schedulesByDay = DAYS_OF_WEEK.reduce((acc, day) => {
     acc[day] = studentSchedules.filter((schedule) => schedule.day === day);
     return acc;
   }, {} as Record<string, typeof studentSchedules>);
-
+  console.log("schedulesByDay", schedulesByDay);
   // Format time from ISO string to readable format
   const formatTime = (timeString: string) => {
     return new Date(timeString).toLocaleTimeString("fr-FR", {
@@ -99,7 +100,7 @@ const TeacherSchedule: FC = () => {
                     <div className="space-y-4">
                       {schedulesByDay[day].map((schedule) => {
                         const course = courses.find(
-                          (c) => c.id === schedule.course_id
+                          (c) => c.id === schedule.course_id.id
                         );
                         return (
                           <div
@@ -108,7 +109,8 @@ const TeacherSchedule: FC = () => {
                           >
                             <div className="flex justify-between items-center">
                               <Badge variant="secondary" className="text-sm">
-                                {course?.name || `Cours ${schedule.course_id}`}
+                                {course?.name ||
+                                  `Cours ${schedule.course_id.name}`}
                               </Badge>
                               <span className="text-sm text-gray-500">
                                 {formatTime(schedule.start_time)} -{" "}

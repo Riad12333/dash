@@ -52,16 +52,6 @@ const CoursesPage: FC = () => {
         <Card>
           <CardContent className="pt-6">
             <div className="text-center">
-              <p className="text-sm font-medium text-gray-500">Cours actifs</p>
-              <p className="text-3xl font-bold text-green-600">
-                {stats.activeCourses}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center">
               <p className="text-sm font-medium text-gray-500">
                 Taux de présence moyen
               </p>

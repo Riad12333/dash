@@ -15,7 +15,9 @@ export interface CreateUserData {
   email: string;
   role: string;
   password: string;
-  fingerprint_id?: string;
+  section: string;
+  group: string;
+  faculty: string;
 }
 
 export interface UserStats {
@@ -134,7 +136,7 @@ export const useUsers = () => {
   const createUser = async (userData: CreateUserData) => {
     try {
       setIsLoading(true);
-
+      console.log("userData 111111111", userData);
       const res = await fetch("/api/users", {
         method: "POST",
         headers: {
@@ -145,7 +147,6 @@ export const useUsers = () => {
       });
 
       const data = await res.json();
-
       if (!res.ok) {
         throw new Error(data.error || "Failed to create user");
       }

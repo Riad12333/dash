@@ -82,21 +82,23 @@ const AdminSchedules: FC = () => {
       ? selectedProfessor === "all"
         ? schedules
         : schedules.filter((schedule) => {
-            const course = courses.find((c) => c.id === schedule.course_id);
+            const course = courses.find((c) => c.id === schedule.course_id.id);
             return course?.professor?.name === selectedProfessor;
           })
       : selectedSection === "all"
       ? schedules
       : schedules.filter((schedule) => {
-          const course = courses.find((c) => c.id === schedule.course_id);
+          const course = courses.find((c) => c.id === schedule.course_id.id);
 
           return course?.section?.name === selectedSection;
         });
+  console.log("filteredSchedules", filteredSchedules);
   // Group schedules by day
   const schedulesByDay = DAYS_OF_WEEK.reduce((acc, day) => {
     acc[day] = filteredSchedules.filter((schedule) => schedule.day === day);
     return acc;
   }, {} as Record<string, Schedule[]>);
+  console.log("schedulesByDay", schedulesByDay);
 
   // Format time from ISO string to readable format
   const formatTime = (timeString: string) => {
@@ -255,7 +257,7 @@ const AdminSchedules: FC = () => {
                 <div className="space-y-4">
                   {schedulesByDay[day].map((schedule) => {
                     const course = courses.find(
-                      (c) => c.id === schedule.course_id
+                      (c) => c.id === schedule.course_id.id
                     );
                     return (
                       <div
@@ -264,8 +266,9 @@ const AdminSchedules: FC = () => {
                       >
                         <div className="flex justify-between items-center">
                           <Badge variant="secondary" className="text-sm">
-                            {course?.name || `Cours ${schedule.course_id}`}
+                            {course?.name || `Cours ${schedule.course_id.name}`}
                           </Badge>
+
                           <span className="text-sm text-gray-500">
                             {formatTime(schedule.start_time)} -{" "}
                             {formatTime(schedule.end_time)}
@@ -280,11 +283,13 @@ const AdminSchedules: FC = () => {
                             {course.section.year}
                           </div>
                         )}
-                        {activeTab === "sections" && course?.professor && (
-                          <div className="text-sm text-gray-600">
-                            Professeur: {course.professor.name}
-                          </div>
-                        )}
+                        {(activeTab === "sections" ||
+                          activeTab === "professors") &&
+                          course?.professor && (
+                            <div className="text-sm text-gray-600">
+                              Professeur: {course.professor.name}
+                            </div>
+                          )}
                       </div>
                     );
                   })}

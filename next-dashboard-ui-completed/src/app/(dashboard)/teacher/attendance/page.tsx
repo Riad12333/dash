@@ -157,18 +157,7 @@ const AdminAttendance: FC = () => {
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center">
-              <p className="text-sm font-medium text-gray-500">
-                Vérifications d&apos;empreintes
-              </p>
-              <p className="text-3xl font-bold text-purple-600">
-                {filteredRecords.length}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+
         <Card>
           <CardContent className="pt-6">
             <div className="text-center">

@@ -20,7 +20,7 @@ const AdminDashboard: FC = () => {
     {
       title: "Total Utilisateurs",
       value: stats.total.toString(),
-      change: "+12%",
+      change: "",
       icon: "👥",
       description: "Depuis le mois dernier",
       link: "/admin/users",
@@ -28,7 +28,7 @@ const AdminDashboard: FC = () => {
     {
       title: "Étudiants",
       value: stats.students.toString(),
-      change: "+3",
+      change: "",
       icon: "📚",
       description: "Cette semaine",
       link: "/admin/users",
@@ -36,7 +36,7 @@ const AdminDashboard: FC = () => {
     {
       title: "Enseignants",
       value: stats.teachers.toString(),
-      change: "+5%",
+      change: "",
       icon: "📊",
       description: "Moyenne globale",
       link: "/admin/users",
@@ -44,7 +44,7 @@ const AdminDashboard: FC = () => {
     {
       title: "Administrateurs",
       value: stats.admins.toString(),
-      change: "-1",
+      change: "",
       icon: "⚠️",
       description: "Problèmes actifs",
       link: "/admin/users",
@@ -141,44 +141,6 @@ const AdminDashboard: FC = () => {
                 <span className="text-2xl mb-2 block">⚙️</span>
                 Paramètres
               </Link>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Activité récente */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Activité récente</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center p-4 bg-gray-50 rounded-lg">
-                <span className="text-2xl mr-4">📝</span>
-                <div>
-                  <h3 className="font-medium">Nouveau cours créé</h3>
-                  <p className="text-sm text-gray-500">
-                    Intelligence Artificielle (INFO401) - Il y a 2 heures
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center p-4 bg-gray-50 rounded-lg">
-                <span className="text-2xl mr-4">👤</span>
-                <div>
-                  <h3 className="font-medium">Nouvel utilisateur</h3>
-                  <p className="text-sm text-gray-500">
-                    Madjid (Étudiant) - Il y a 4 heures
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center p-4 bg-gray-50 rounded-lg">
-                <span className="text-2xl mr-4">✅</span>
-                <div>
-                  <h3 className="font-medium">Présence mise à jour</h3>
-                  <p className="text-sm text-gray-500">
-                    Systèmes Distribués (INFO402) - Il y a 6 heures
-                  </p>
-                </div>
-              </div>
             </div>
           </CardContent>
         </Card>

@@ -1,6 +1,6 @@
 "use client";
 
-import { FC, useState } from "react";
+import { FC, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -21,19 +21,34 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { useRouter } from "next/navigation";
 import { useUsers, CreateUserData } from "@/hooks/useUsers";
+import { useSections } from "@/hooks/useSections";
+import { useGroups } from "@/hooks/useGroups";
 
 const AddUserDialog: FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const { createUser, isLoading, fetchUsers } = useUsers();
   const router = useRouter();
+  const { sections, error, fetchSections } = useSections();
   const { toast } = useToast();
   const [formData, setFormData] = useState<CreateUserData>({
     name: "",
     email: "",
     role: "",
     password: "",
-    fingerprint_id: "",
+    section: "",
+    group: "",
+    faculty: "",
   });
+
+  // Get groups for the selected section
+  const { groups } = useGroups(
+    formData.section ? parseInt(formData.section) : 0
+  );
+
+  // Reset group when section changes
+  useEffect(() => {
+    setFormData((prev) => ({ ...prev, group: "" }));
+  }, [formData.section]);
 
   const handleSubmit = async () => {
     try {
@@ -52,15 +67,21 @@ const AddUserDialog: FC = () => {
         return;
       }
 
-      // Additional validation for fingerprint_id
       if (
-        (formData.role === "student" || formData.role === "teacher") &&
-        !formData.fingerprint_id
+        formData.role === "student" &&
+        (!formData.section || !formData.group)
       ) {
         toast({
           title: "Erreur de validation",
-          description:
-            "L'ID d'empreinte digitale est requis pour les étudiants et les enseignants",
+          description: "section et le groupe sont requis pour les étudiants ",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (formData.role === "teacher" && !formData.faculty) {
+        toast({
+          title: "Erreur de validation",
+          description: "La faculté est requise pour les enseignants",
           variant: "destructive",
         });
         return;
@@ -85,8 +106,10 @@ const AddUserDialog: FC = () => {
       name: "",
       email: "",
       role: "",
+      section: "",
+      group: "",
       password: "",
-      fingerprint_id: "",
+      faculty: "",
     });
   };
 
@@ -171,20 +194,95 @@ const AddUserDialog: FC = () => {
               </SelectContent>
             </Select>
           </div>
-          {(formData.role === "student" || formData.role === "teacher") && (
+
+          {formData.role === "student" && (
+            <Select
+              value={formData.section}
+              onValueChange={(value) =>
+                setFormData({ ...formData, section: value })
+              }
+            >
+              <SelectTrigger id="role" className="border-gray-200 bg-white">
+                <SelectValue placeholder="Sélectionner une section" />
+              </SelectTrigger>
+              <SelectContent
+                position="popper"
+                sideOffset={5}
+                className="z-[60] bg-white"
+              >
+                {sections.map(
+                  (section) =>
+                    section && (
+                      <SelectItem
+                        key={section.id}
+                        value={section.id.toString()}
+                      >
+                        {section.name}
+                      </SelectItem>
+                    )
+                )}
+              </SelectContent>
+            </Select>
+          )}
+          {formData.role === "teacher" && (
             <div className="grid gap-2">
-              <Label htmlFor="fingerprint_id" className="text-gray-700">
-                ID d&apos;empreinte digitale
+              <Label htmlFor="faculty" className="text-gray-700">
+                Faculté
               </Label>
-              <Input
-                id="fingerprint_id"
-                value={formData.fingerprint_id}
-                onChange={(e) =>
-                  setFormData({ ...formData, fingerprint_id: e.target.value })
+              <Select
+                value={formData.faculty}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, faculty: value })
                 }
-                placeholder="12345"
-                className="border-gray-200 focus:border-blue-500 focus:ring-blue-500"
-              />
+              >
+                <SelectTrigger
+                  id="faculty"
+                  className="border-gray-200 bg-white"
+                >
+                  <SelectValue placeholder="Sélectionner une faculté" />
+                </SelectTrigger>
+                <SelectContent
+                  position="popper"
+                  sideOffset={5}
+                  className="z-[60] bg-white"
+                >
+                  <SelectItem value="FI">FI</SelectItem>
+                  <SelectItem value="FSB">FSB</SelectItem>
+                  <SelectItem value="FC">FC</SelectItem>
+                  <SelectItem value="FE">FE</SelectItem>
+                  <SelectItem value="FP">FP</SelectItem>
+                  <SelectItem value="FM">FM</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          {formData.role === "student" && (
+            <div className="grid gap-2">
+              <Label htmlFor="group" className="text-gray-700">
+                Groupe
+              </Label>
+              <Select
+                value={formData.group}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, group: value })
+                }
+                disabled={!formData.section}
+              >
+                <SelectTrigger id="groupe" className="border-gray-200 bg-white">
+                  <SelectValue placeholder="Sélectionner un groupe" />
+                </SelectTrigger>
+                <SelectContent
+                  position="popper"
+                  sideOffset={5}
+                  className="z-[60] bg-white"
+                >
+                  {groups.map((group) => (
+                    <SelectItem key={group.id} value={group.id.toString()}>
+                      {group.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           )}
         </div>

@@ -10,10 +10,12 @@ const createUserSchema = z.object({
   email: z.string().email("Invalid email format"),
   name: z.string().min(2, "Name must be at least 2 characters"),
   password: z.string().min(6, "Password must be at least 6 characters"),
+  group: z.string().min(0, "Group is required"),
+  section: z.string().min(0, "Section is required"),
   role: z.enum(["admin", "teacher", "student"], {
     errorMap: () => ({ message: "Invalid role" }),
   }),
-  fingerprint_id: z.string().optional(),
+  faculty: z.string().min(0, "Faculty is required"),
 });
 
 // Validation schema for user deletion
@@ -46,7 +48,7 @@ export async function POST(request: Request) {
     // Parse and validate request body
     const body = await request.json();
     const validationResult = createUserSchema.safeParse(body);
-
+    console.log("validationResult 111111111", body);
     if (!validationResult.success) {
       return NextResponse.json(
         { error: validationResult.error.errors[0].message },
@@ -54,9 +56,8 @@ export async function POST(request: Request) {
       );
     }
 
-    const { email, name, password, role, fingerprint_id } =
+    const { email, name, password, role, faculty, group, section } =
       validationResult.data;
-
     // Hash the password
     const password_hash = await bcrypt.hash(password, 10);
 
@@ -89,34 +90,33 @@ export async function POST(request: Request) {
         });
         break;
       case "student":
-        if (!fingerprint_id) {
-          return NextResponse.json(
-            { error: "Fingerprint ID is required for students" },
-            { status: 400 }
-          );
-        }
         user = await prisma.students.create({
           data: {
             email,
             name,
             password_hash,
-            fingerprint_id,
+            groups: {
+              connect: {
+                id: parseInt(group),
+              },
+            },
+            sections: {
+              connect: {
+                id: parseInt(section),
+              },
+            },
+            fingerprint_id: "",
           },
         });
         break;
       case "teacher":
-        if (!fingerprint_id) {
-          return NextResponse.json(
-            { error: "Fingerprint ID is required for teachers" },
-            { status: 400 }
-          );
-        }
         user = await prisma.professors.create({
           data: {
             email,
             name,
+            faculty,
+            fingerprint_id: "",
             password_hash,
-            fingerprint_id,
           },
         });
         break;
